@@ -2,7 +2,7 @@
   <img src="public/api_whatsapp.png" alt="Lightweight API for WhatsApp" width="120" height="120">
 </p>
 
-# 📱 WhatsApp Web.js API REST
+# 📱 WhatsApp API REST
 
 `whatsapp-web-api-rest` is an easy-to-use Docker REST API  wrapper for [Baileys - Lightweight full-featured TypeScript/JavaScript WhatsApp Web API](https://github.com/WhiskeySockets/Baileys) built with [NestJS](https://nestjs.com/). It allows you to interact with WhatsApp using endpoints to enable message sending, simulate actions, fetch contacts, and more.
 

@@ -1,0 +1,13 @@
+node_modules
+Dockerfile
+.git
+.gitignore
+*.sh
+README.md
+!/tsconfig.json
+!/src
+.wwebjs_cache
+wwebjs_auth
+.prettierignore
+.prettierrc
+commitlint.config.js

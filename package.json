@@ -1,7 +1,7 @@
 {
-  "name": "whatsapp-web.js-api-rest",
+  "name": "whatsapp-web-api-rest",
   "version": "1.0.0",
-  "description": "whatsapp-web.js-api-rest is an easy-to-use REST API wrapper for Baileys - Lightweight WhatsApp Web API built with NestJS. It allows you to interact with WhatsApp using endpoints to enable message sending, simulate actions, fetch contacts, and more.",
+  "description": "whatsapp-web-api-rest is an easy-to-use REST API wrapper for Baileys - Lightweight WhatsApp Web API built with NestJS. It allows you to interact with WhatsApp using endpoints to enable message sending, simulate actions, fetch contacts, and more.",
   "author": "Cristian Yosafat Hernández Ruiz",
   "keywords": [
     "whatsapp",

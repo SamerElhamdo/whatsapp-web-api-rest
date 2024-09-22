@@ -4,7 +4,7 @@
 
 # 📱 WhatsApp Web.js API REST
 
-`whatsapp-web.js-api-rest` is an easy-to-use Docker REST API  wrapper for [Baileys - Lightweight full-featured TypeScript/JavaScript WhatsApp Web API](https://github.com/WhiskeySockets/Baileys) built with [NestJS](https://nestjs.com/). It allows you to interact with WhatsApp using endpoints to enable message sending, simulate actions, fetch contacts, and more.
+`whatsapp-web-api-rest` is an easy-to-use Docker REST API  wrapper for [Baileys - Lightweight full-featured TypeScript/JavaScript WhatsApp Web API](https://github.com/WhiskeySockets/Baileys) built with [NestJS](https://nestjs.com/). It allows you to interact with WhatsApp using endpoints to enable message sending, simulate actions, fetch contacts, and more.
 
 ## ✨ Features
 
@@ -19,10 +19,10 @@
 
 ## 🐳 Docker
 
-> https://hub.docker.com/r/blakegt/whatsapp-web.js-api-rest
+> https://hub.docker.com/r/blakegt/whatsapp-web-api-rest
 
 ```bash
-docker run --restart unless-stopped -dp 8085:8085 --name whatsapp-web.js-api-rest blakegt/whatsapp-web.js-api-rest:latest
+docker run --restart unless-stopped -dp 8085:8085 --name whatsapp-web-api-rest blakegt/whatsapp-web-api-rest:latest
 ```
 
 <br/>
@@ -32,13 +32,13 @@ docker run --restart unless-stopped -dp 8085:8085 --name whatsapp-web.js-api-res
 Clone the repository:
 
 ```bash
-git clone https://github.com/your-username/whatsapp-web.js-api-rest.git
+git clone https://github.com/your-username/whatsapp-web-api-rest.git
 ```
 
 Install dependencies:
 
 ```bash
-cd whatsapp-web.js-api-rest
+cd whatsapp-web-api-rest
 npm install or pnpm i
 ```
 

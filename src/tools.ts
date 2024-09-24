@@ -1,3 +1,5 @@
+export const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
+
 export const is = {
   array: (array: any): boolean => {
     return typeof array === 'object' && array != null && array.length > 0;

@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { IMessage } from './whatsapp.interface';
 import { WebhookService } from '../webhook/webhook.service';
-import { is, to } from '@src/tools';
+import { delay, is, to } from '@src/tools';
 const qrcode = require('qrcode-terminal');
 import makeWASocket, { Browsers, Chat, ConnectionState, Contact, DisconnectReason, downloadMediaMessage, isJidBroadcast, isJidNewsletter, isJidStatusBroadcast, useMultiFileAuthState, WACallEvent, WAPresence } from '@whiskeysockets/baileys';
 import { Boom } from '@hapi/boom';
@@ -26,9 +26,10 @@ declare global {
 @Injectable()
 export class WhatsappService {
 
-  private client: any;
+  private client: any = null;
   private readonly filePath: string = path.join(__dirname, '..', 'whatsapp_data.json');
   private readonly credentialsFolderName = 'auth_info';
+  private isConnected: boolean = false;
 
   constructor(
     private eventEmitter: EventEmitter2,
@@ -40,6 +41,16 @@ export class WhatsappService {
   */
   async start(): Promise<void> {
     console.log('start')
+
+    // Check if the client is already connected
+    if (this.isConnected && this.client) {
+      let text = 'WhatsApp is already connected!';
+      console.log(text);
+      await delay(1500);
+      this.eventEmitter.emit('start.event', { qr: '', text });
+      return;
+    }
+
     const { state, saveCreds } = await useMultiFileAuthState(this.credentialsFolderName);
 
     this.client = makeWASocket({
@@ -55,95 +66,102 @@ export class WhatsappService {
       keepAliveIntervalMs: 30_000,
     });
 
-    /** 
-     * connection state has been updated -- WS closed, opened, connecting etc. 
-    */
-    this.client.ev.on('connection.update', async (connectionState: ConnectionState) => {
-      const { connection, isNewLogin, lastDisconnect, qr } = connectionState;
-      let text = '';
-
-      if (is.string(qr) && qr != '') {
-        let text = (new Date().toISOString()).replace('T', ' ').replace('Z', '').substring(0, 19);
-        qrcode.generate(qr, { small: true });
-        this.eventEmitter.emit('start.event', { qr, text });
-      }
-
-      // Handle connection close and reconnection logic
-      if (connection === 'close') {
-        const shouldReconnect = (lastDisconnect?.error as Boom)?.output?.statusCode !== DisconnectReason.loggedOut;
-        if (shouldReconnect) {
-          text = 'Connection closed, attempting to reconnect...';
-          await this.start();
-        } else text = 'Connection closed, not reconnecting due to logout or invalid credentials';
-
-        // Log the detailed error from the disconnection
-        if (lastDisconnect?.error) text = `Disconnection error: ${lastDisconnect?.error}`;
-
-      } else if (connection === 'open') {
-        text = 'Connected to WhatsApp!';
-      }
-
-      if (text != '') {
-        this.eventEmitter.emit('start.event', { qr: '', text });
-        console.log(text);
-      }
-    })
-
     this.client.ev.on('creds.update', saveCreds);
+    this.client.ev.on('connection.update', this.onConnectionUpdate);
+    this.client.ev.on('messaging-history.set', this.onMessagingHistory);
+    this.client.ev.on('messages.upsert', this.onMessageUpsert);
+    this.client.ev.on('call', this.onCall);
+  }
 
-    // Listen for incoming historical chats and contacts
-    this.client.ev.on('messaging-history.set', (data: any) => {
-      console.log('Historical chats and contacts synced');
+  /**
+   * Connection state has been updated -- WS closed, opened, connecting etc. 
+  */
+  private onConnectionUpdate = async (connectionState: ConnectionState) => {
+    const { connection, isNewLogin, lastDisconnect, qr } = connectionState;
+    let text = '';
 
-      const existingData = this.readDataFromFile();
+    if (is.string(qr) && qr != '') {
+      let text = (new Date().toISOString()).replace('T', ' ').replace('Z', '').substring(0, 19);
+      qrcode.generate(qr, { small: true });
+      this.eventEmitter.emit('start.event', { qr, text });
+    }
 
-      // Merge new chats and contacts with existing data
-      const newChats = data.chats || [];
-      const newContacts = data.contacts || [];
+    // Handle connection close and reconnection logic
+    if (connection === 'close') {
+      this.isConnected = false;
 
-      // Append new chats and contacts to existing ones
-      const updatedChats = [...existingData.chats, ...newChats];
-      const updatedContacts = [...existingData.contacts, ...newContacts];
+      const shouldReconnect = (lastDisconnect?.error as Boom)?.output?.statusCode !== DisconnectReason.loggedOut;
+      if (shouldReconnect) {
+        text = 'Connection closed, attempting to reconnect...';
+        await this.start();
+      } else text = 'Connection closed, not reconnecting due to logout or invalid credentials';
 
-      // Save updated chats and contacts to the file
-      this.saveDataToFile(updatedChats, updatedContacts);
-      console.log('Chats and contacts saved to whatsapp_data.json');
-    });
+      // Log the detailed error from the disconnection
+      if (lastDisconnect?.error) text = `Disconnection error: ${lastDisconnect?.error}`;
 
-    /**
-     * add/update the given messages. If they were received while the connection was online,
-     * the update will have type: "notify"
-    */
-    this.client.ev.on('messages.upsert', async (waMessage: any) => {
-      if (waMessage?.type === 'notify') {
-        const messages = waMessage.messages;
-        if (is.array(messages)) {
-          for (const conversation of messages) {
-            if (!conversation.key.fromMe && conversation.message) {
-              const from = conversation.key.remoteJid;
-              if (isJidStatusBroadcast(from) || isJidNewsletter(from) || isJidBroadcast(from)) return;
+    } else if (connection === 'open') {
+      text = 'Connected to WhatsApp!';
+      this.isConnected = true;
+    }
 
-              const mimeType = this.getMediaMimeType(conversation);
-              let media = { mimeType, data: '' };
+    if (text != '') {
+      this.eventEmitter.emit('start.event', { qr: '', text });
+      console.log(text);
+    }
+  }
 
-              if (mimeType != '') {
-                const mediaBuffer = await downloadMediaMessage(conversation, 'buffer', {});
-                media.data = mediaBuffer.toString('base64');
-              }
-              this.webhook.send({ message: { ...conversation, from }, media });
+  // Listen for incoming historical chats and contacts
+  private onMessagingHistory = (data: any) => {
+    console.log('Historical chats and contacts synced');
+
+    const existingData = this.readDataFromFile();
+
+    // Merge new chats and contacts with existing data
+    const newChats = data.chats || [];
+    const newContacts = data.contacts || [];
+
+    // Append new chats and contacts to existing ones
+    const updatedChats = [...existingData.chats, ...newChats];
+    const updatedContacts = [...existingData.contacts, ...newContacts];
+
+    // Save updated chats and contacts to the file
+    this.saveDataToFile(updatedChats, updatedContacts);
+    console.log('Chats and contacts saved to whatsapp_data.json');
+  }
+
+  /**
+    * add/update the given messages. If they were received while the connection was online,
+    * the update will have type: "notify"
+   */
+  private onMessageUpsert = async (waMessage: any) => {
+    if (waMessage?.type === 'notify') {
+      const messages = waMessage.messages;
+      if (is.array(messages)) {
+        for (const conversation of messages) {
+          if (!conversation.key.fromMe && conversation.message) {
+            const from = conversation.key.remoteJid;
+            if (isJidStatusBroadcast(from) || isJidNewsletter(from) || isJidBroadcast(from)) return;
+
+            const mimeType = this.getMediaMimeType(conversation);
+            let media = { mimeType, data: '' };
+
+            if (mimeType != '') {
+              const mediaBuffer = await downloadMediaMessage(conversation, 'buffer', {});
+              media.data = mediaBuffer.toString('base64');
             }
+            this.webhook.send({ message: { ...conversation, from }, media });
           }
         }
       }
-    });
+    }
+  }
 
-    /** 
-     * Receive an update on a call, including when the call was received, rejected, accepted 
-    **/
-    this.client.ev.on('call', async (call: WACallEvent) => {
-      await this.client.rejectCall(call?.id, call?.from);
-      this.webhook.send({ call });
-    });
+  /**
+   * Receive an update on a call, including when the call was received, rejected, accepted 
+  **/
+  private onCall = async (call: WACallEvent) => {
+    await this.client.rejectCall(call?.id, call?.from);
+    this.webhook.send({ call });
   }
 
   /**

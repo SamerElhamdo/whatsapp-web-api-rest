@@ -51,11 +51,13 @@ export class WebhookService {
       }
       let promises = [];
       for (let url of list) {
-        let send = fetch(url, options);
-        promises.push(send);
+        if (url != '') {
+          let send = fetch(url, options);
+          promises.push(send);
+        }
       }
       if (is.array(promises)) {
-        Promise.all(promises).catch(e => console.log(e?.message));
+        Promise.all(promises).catch(e => console.log(`Webhook: ${e?.message}`));
       }
     }
   }

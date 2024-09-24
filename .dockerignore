@@ -6,8 +6,7 @@ Dockerfile
 README.md
 !/tsconfig.json
 !/src
-.wwebjs_cache
-wwebjs_auth
 .prettierignore
 .prettierrc
 commitlint.config.js
+auth_info

@@ -5,7 +5,6 @@ interface IContact {
   email: string;
 }
 
-
 export interface IMessage {
   chatId: string;
   text: string;

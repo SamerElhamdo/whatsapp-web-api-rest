@@ -1,0 +1,34 @@
+{
+  "files": {
+    "ignoreUnknown": false,
+    "ignore": ["dist/**", "public/**"]
+  },
+  "formatter": {
+    "enabled": true,
+    "lineWidth": 300,
+    "indentStyle": "space",
+    "indentWidth": 2
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true,
+      "suspicious": {
+        "noExplicitAny": "off"
+      },
+      "style": {
+        "useImportType": "off",
+        "useTemplate": "off"
+      }
+    }
+  },
+  "javascript": {
+    "parser": {
+      "unsafeParameterDecoratorsEnabled": true
+    },
+    "formatter": {
+      "quoteStyle": "single",
+      "jsxQuoteStyle": "single"
+    }
+  }
+}

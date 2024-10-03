@@ -1,23 +1,22 @@
 import { Body, Controller, Delete, Get, Param, Post, Res, Sse } from '@nestjs/common';
-import { ApiTags, ApiConsumes, ApiProduces } from '@nestjs/swagger';
-import { Subject, Observable } from 'rxjs';
+import { OnEvent } from '@nestjs/event-emitter';
+import { ApiConsumes, ApiProduces, ApiTags } from '@nestjs/swagger';
+import { Chat, Contact, WAPresence } from '@whiskeysockets/baileys';
 import { FastifyReply } from 'fastify';
+import { Observable, Subject } from 'rxjs';
+import { WebhookService } from '../webhook/webhook.service';
 import { IMessage } from './whatsapp.interface';
 import { WhatsappService } from './whatsapp.service';
-import { OnEvent } from '@nestjs/event-emitter';
-import { WebhookService } from '../webhook/webhook.service';
-import { WAPresence, Chat, Contact } from '@whiskeysockets/baileys';
 
 @ApiTags('WhatsApp')
 @Controller()
 export class WhatsappController {
-
   private eventEmitter = new Subject<MessageEvent>();
 
   constructor(
     private whatsapp: WhatsappService,
     private webhooks: WebhookService,
-  ) { }
+  ) {}
 
   @Get()
   controllerGetStart(@Res() reply: FastifyReply) {
@@ -36,20 +35,20 @@ export class WhatsappController {
   @Post('simulate')
   @ApiProduces('application/json')
   @ApiConsumes('application/json')
-  async controllerPostSimulate(@Body() payload: { chatId: string, action: WAPresence }): Promise<any> {
-    let { chatId, action } = payload;
+  async controllerPostSimulate(@Body() payload: { chatId: string; action: WAPresence }): Promise<any> {
+    const { chatId, action } = payload;
     return await this.whatsapp.sendSimulate(chatId, action);
   }
 
   @Get('profile/status/:chatId')
   @ApiProduces('application/json')
-  async controllerGetProfileStatus(@Param('chatId') chatId: string): Promise<Object> {
+  async controllerGetProfileStatus(@Param('chatId') chatId: string): Promise<object> {
     return await this.whatsapp.getProfileStatus(chatId);
   }
 
   @Get('profile/picture/:chatId')
   @ApiProduces('application/json')
-  async controllerGetProfilePicture(@Param('chatId') chatId: string): Promise<Object> {
+  async controllerGetProfilePicture(@Param('chatId') chatId: string): Promise<object> {
     return await this.whatsapp.getProfilePicture(chatId);
   }
 
@@ -67,7 +66,7 @@ export class WhatsappController {
 
   @Get('number/:numberId')
   @ApiProduces('application/json')
-  async controllerGetNumberId(@Param('numberId') numberId: string): Promise<Object> {
+  async controllerGetNumberId(@Param('numberId') numberId: string): Promise<object> {
     return await this.whatsapp.getNumberId(numberId);
   }
 
@@ -94,8 +93,9 @@ export class WhatsappController {
 
   @Delete('webhooks/:index')
   controllerDeleteWebhooks(@Param('index') index: number): void {
-    if (index > 0) index = index - 1;
-    this.webhooks.delete(index);
+    let noIndex = index;
+    if (index > 0) noIndex = noIndex - 1;
+    this.webhooks.delete(noIndex);
   }
 
   @Sse('sse')

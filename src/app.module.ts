@@ -4,11 +4,6 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ImportModules } from '@src/app.modules.import';
 
 @Module({
-  imports: [
-    ConfigModule.forRoot(),
-    EventEmitterModule.forRoot(),
-    ...ImportModules,
-  ]
+  imports: [ConfigModule.forRoot(), EventEmitterModule.forRoot(), ...ImportModules],
 })
-
-export class AppModule { }
+export class AppModule {}

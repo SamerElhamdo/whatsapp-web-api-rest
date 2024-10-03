@@ -1,4 +1,4 @@
-document.addEventListener("DOMContentLoaded", function () {
+document.addEventListener("DOMContentLoaded", () => {
 
   const qrOptions = {
     width: 264,
@@ -19,7 +19,7 @@ document.addEventListener("DOMContentLoaded", function () {
       const response = JSON.parse(data);
       const qr = response?.qr;
       document.getElementById("text").innerHTML = response?.text;
-      if (qr != '') new QRCode(document.getElementById("qr"), { text: qr, ...qrOptions });
+      if (qr !== '') new QRCode(document.getElementById("qr"), { text: qr, ...qrOptions });
     } catch (e) {
       console.log(e);
       document.getElementById("text").innerHTML = 'Event source error!';

@@ -16,7 +16,7 @@ export const is = {
   string: (str: any): boolean => {
     return typeof str === 'string';
   },
-}
+};
 
 export const to = {
   string: (str: any): string => {
@@ -24,7 +24,7 @@ export const to = {
     return '';
   },
   undefined: (str: any, defaultValue = undefined): string | number | undefined => {
-    if ((typeof str === 'string' || typeof str === 'number') && str != '') return str;
+    if ((typeof str === 'string' || typeof str === 'number') && str !== '') return str;
     return defaultValue;
   },
-}
+};

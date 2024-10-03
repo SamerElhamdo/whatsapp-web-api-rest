@@ -1,7 +1,7 @@
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { is } from '@src/tools';
-import * as fs from 'fs';
-import * as path from 'path';
 
 @Injectable()
 export class WebhookService {
@@ -41,24 +41,21 @@ export class WebhookService {
     this.save(strings);
   }
 
-  send(data: Object): void {
-    const list = this.get();
-    if (is.array(list)) {
-      let options = {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
+  send(list: [], data: object): void {
+    const options = {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    };
+    const promises = [];
+    for (const url of list) {
+      if (url !== '') {
+        const send = fetch(url, options);
+        promises.push(send);
       }
-      let promises = [];
-      for (let url of list) {
-        if (url != '') {
-          let send = fetch(url, options);
-          promises.push(send);
-        }
-      }
-      if (is.array(promises)) {
-        Promise.all(promises).catch(e => console.log(`Webhook: ${e?.message}`));
-      }
+    }
+    if (is.array(promises)) {
+      Promise.all(promises).catch((e) => console.log(`Webhook: ${e?.message}`));
     }
   }
 

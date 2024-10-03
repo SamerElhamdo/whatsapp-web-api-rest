@@ -1,7 +1,7 @@
+import * as path from 'node:path';
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from '@src/app.module';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
-import * as path from 'path';
+import { AppModule } from '@src/app.module';
 
 (async () => {
   const port = process.env.APP_PORT || 8085;
@@ -9,10 +9,12 @@ import * as path from 'path';
 
   // Fastify app
   const app = await NestFactory.create<NestFastifyApplication>(
-    AppModule, new FastifyAdapter({
+    AppModule,
+    new FastifyAdapter({
       bodyLimit: 26214400 /*25MB*/,
-      forceCloseConnections: true
-    }));
+      forceCloseConnections: true,
+    }),
+  );
 
   // Public assets
   app.useStaticAssets({

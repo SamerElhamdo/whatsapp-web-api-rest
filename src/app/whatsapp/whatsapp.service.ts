@@ -1,13 +1,13 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { IMessage } from './whatsapp.interface';
-import { WebhookService } from '../webhook/webhook.service';
 import { delay, is, to } from '@src/tools';
+import { WebhookService } from '../webhook/webhook.service';
+import { IMessage } from './whatsapp.interface';
 const qrcode = require('qrcode-terminal');
-import makeWASocket, { Browsers, Chat, ConnectionState, Contact, DisconnectReason, downloadMediaMessage, isJidBroadcast, isJidNewsletter, isJidStatusBroadcast, useMultiFileAuthState, WACallEvent, WAPresence } from '@whiskeysockets/baileys';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import { Boom } from '@hapi/boom';
-import * as fs from 'fs';
-import * as path from 'path';
+import makeWASocket, { Browsers, Chat, ConnectionState, Contact, DisconnectReason, downloadMediaMessage, isJidBroadcast, isJidNewsletter, isJidStatusBroadcast, useMultiFileAuthState, WACallEvent, WAPresence } from '@whiskeysockets/baileys';
 
 declare global {
   interface Window {
@@ -18,34 +18,34 @@ declare global {
 // File path for storing chats and contacts in JSON format
 
 /**
-  * Starting service for interacting with the WhatsApp Web API
-  * Read @whiskeysockets
-  * https://baileys.whiskeysockets.io/functions/makeWASocket.html
-*/
+ * Starting service for interacting with the WhatsApp Web API
+ * Read @whiskeysockets
+ * https://baileys.whiskeysockets.io/functions/makeWASocket.html
+ */
 
 @Injectable()
 export class WhatsappService {
-
   private client: any = null;
+  private isConnected = false;
   private readonly filePath: string = path.join(__dirname, '..', 'whatsapp_data.json');
   private readonly credentialsFolderName = 'auth_info';
-  private isConnected: boolean = false;
+  private readonly logger = new Logger('Whatsapp');
 
   constructor(
     private eventEmitter: EventEmitter2,
     private webhook: WebhookService,
-  ) { }
+  ) {}
 
   /**
-  * Create connection to WA
-  */
+   * Create connection to WA
+   */
   async start(): Promise<void> {
-    console.log('start')
+    this.logger.debug('start');
 
     // Check if the client is already connected
     if (this.isConnected && this.client) {
-      let text = 'WhatsApp is already connected!';
-      console.log(text);
+      const text = 'WhatsApp is already connected!';
+      this.logger.debug(text);
       await delay(1500);
       this.eventEmitter.emit('start.event', { qr: '', text });
       return;
@@ -74,14 +74,14 @@ export class WhatsappService {
   }
 
   /**
-   * Connection state has been updated -- WS closed, opened, connecting etc. 
-  */
+   * Connection state has been updated -- WS closed, opened, connecting etc.
+   */
   private onConnectionUpdate = async (connectionState: ConnectionState) => {
-    const { connection, isNewLogin, lastDisconnect, qr } = connectionState;
+    const { connection, lastDisconnect, qr } = connectionState;
     let text = '';
 
-    if (is.string(qr) && qr != '') {
-      let text = (new Date().toISOString()).replace('T', ' ').replace('Z', '').substring(0, 19);
+    if (is.string(qr) && qr !== '') {
+      const text = new Date().toISOString().replace('T', ' ').replace('Z', '').substring(0, 19);
       qrcode.generate(qr, { small: true });
       this.eventEmitter.emit('start.event', { qr, text });
     }
@@ -98,21 +98,20 @@ export class WhatsappService {
 
       // Log the detailed error from the disconnection
       if (lastDisconnect?.error) text = `Disconnection error: ${lastDisconnect?.error}`;
-
     } else if (connection === 'open') {
       text = 'Connected to WhatsApp!';
       this.isConnected = true;
     }
 
-    if (text != '') {
+    if (text !== '') {
       this.eventEmitter.emit('start.event', { qr: '', text });
-      console.log(text);
+      this.logger.debug(text);
     }
-  }
+  };
 
   // Listen for incoming historical chats and contacts
   private onMessagingHistory = (data: any) => {
-    console.log('Historical chats and contacts synced');
+    this.logger.debug('Historical chats and contacts synced');
 
     const existingData = this.readDataFromFile();
 
@@ -126,12 +125,12 @@ export class WhatsappService {
 
     // Save updated chats and contacts to the file
     this.saveDataToFile(updatedChats, updatedContacts);
-    console.log('Chats and contacts saved to whatsapp_data.json');
-  }
+    this.logger.debug('Chats and contacts saved to whatsapp_data.json');
+  };
 
   /**
-    * add/update the given messages. If they were received while the connection was online,
-    * the update will have type: "notify"
+   * add/update the given messages. If they were received while the connection was online,
+   * the update will have type: "notify"
    */
   private onMessageUpsert = async (waMessage: any) => {
     if (waMessage?.type === 'notify') {
@@ -142,41 +141,47 @@ export class WhatsappService {
             const from = conversation.key.remoteJid;
             if (isJidStatusBroadcast(from) || isJidNewsletter(from) || isJidBroadcast(from)) return;
 
-            const mimeType = this.getMediaMimeType(conversation);
-            let media = { mimeType, data: '' };
+            const list: any = this.webhook.get();
+            if (is.array(list)) {
+              const mimeType = this.getMediaMimeType(conversation);
+              const media = { mimeType, data: '' };
 
-            if (mimeType != '') {
-              const mediaBuffer = await downloadMediaMessage(conversation, 'buffer', {});
-              media.data = mediaBuffer.toString('base64');
+              if (mimeType !== '') {
+                const mediaBuffer = await downloadMediaMessage(conversation, 'buffer', {});
+                media.data = mediaBuffer.toString('base64');
+              }
+              this.webhook.send(list, { message: { ...conversation, from }, media });
             }
-            this.webhook.send({ message: { ...conversation, from }, media });
           }
         }
       }
     }
-  }
+  };
 
   /**
-   * Receive an update on a call, including when the call was received, rejected, accepted 
-  **/
+   * Receive an update on a call, including when the call was received, rejected, accepted
+   **/
   private onCall = async (call: WACallEvent) => {
     await this.client.rejectCall(call?.id, call?.from);
-    this.webhook.send({ call });
-  }
+    const list: any = this.webhook.get();
+    if (is.array(list)) {
+      this.webhook.send(list, { call });
+    }
+  };
 
   /**
-  * Send a message to a specific chatId
-  */
-  async sendMessage(payload: IMessage): Promise<any | {}> {
+   * Send a message to a specific chatId
+   */
+  async sendMessage(payload: IMessage): Promise<any | object> {
     try {
       const chatId = to.string(payload?.chatId);
-      let { text, options, media, location, poll, contact } = payload;
+      const { text, options, media, location, poll, contact } = payload;
       let content: any = { text };
 
       if (is.object(media)) {
         const typeFile = to.string(media?.type);
         const base64 = to.string(media?.data);
-        if (typeFile != '' && base64 != '') {
+        if (typeFile !== '' && base64 !== '') {
           const buffer = Buffer.from(to.string(media?.data), 'base64');
           content = {
             [typeFile]: buffer,
@@ -185,9 +190,8 @@ export class WhatsappService {
             fileName: to.undefined(media?.filename),
             ptt: to.undefined(media?.ptt),
             gifPlayback: to.undefined(media?.gifPlayback),
-          }
+          };
         }
-
       } else if (is.object(location)) {
         content = {
           location: {
@@ -197,18 +201,16 @@ export class WhatsappService {
             address: location?.address,
             degreesLatitude: location?.latitude,
             degreesLongitude: location?.longitude,
-          }
-        }
-
+          },
+        };
       } else if (is.object(poll)) {
         content = {
           poll: {
             name: poll?.name,
             values: poll.options,
             selectableCount: is.undefined(poll?.allowMultipleAnswers) ? 0 : poll?.allowMultipleAnswers,
-          }
+          },
         };
-
       } else if (is.object(contact)) {
         const firstname = to.string(contact?.firstname);
         const lastname = to.string(contact?.lastname);
@@ -217,7 +219,8 @@ export class WhatsappService {
 
         const displayName = `${firstname} ${lastname}`;
 
-        const vcard = 'BEGIN:VCARD\n' +
+        const vcard =
+          'BEGIN:VCARD\n' +
           'VERSION:3.0\n' +
           //`N:;${lastname};${firstname};;;\n` +
           `FN:${displayName}\n` +
@@ -228,57 +231,55 @@ export class WhatsappService {
         content = {
           contacts: {
             displayName,
-            contacts: [{ vcard }]
-          }
-        }
+            contacts: [{ vcard }],
+          },
+        };
       }
 
-      if (chatId != '' && is.object(content)) return this.client.sendMessage(chatId, content, options);
+      if (chatId !== '' && is.object(content)) return this.client.sendMessage(chatId, content, options);
     } catch (e) {
-      console.log(e);
+      this.logger.debug(e);
     }
     return {};
   }
 
   /**
-  * Simulate  'unavailable' | 'available' | 'composing' | 'recording' | 'paused';
-  */
+   * Simulate  'unavailable' | 'available' | 'composing' | 'recording' | 'paused';
+   */
   async sendSimulate(chatId: string, action: WAPresence): Promise<{ chatId: string }> {
     try {
       await this.client.sendPresenceUpdate(action, chatId);
     } catch (e) {
-      console.log(e)
+      this.logger.debug(e);
     }
     return { chatId };
   }
 
   /**
-* Return the status of a person/group 
-*/
-  async getProfileStatus(chatId: string): Promise<Object> {
+   * Return the status of a person/group
+   */
+  async getProfileStatus(chatId: string): Promise<object> {
     let status = {};
     try {
       status = await this.client.fetchStatus(chatId);
-    } catch (e) {
-    }
+    } catch (e) {}
     return { status };
   }
 
   /**
-  * Return the profile url picture of a person/group 
-  */
-  async getProfilePicture(chatId: string): Promise<Object> {
+   * Return the profile url picture of a person/group
+   */
+  async getProfilePicture(chatId: string): Promise<object> {
     let url = '';
     try {
       url = await this.client.profilePictureUrl(chatId, 'image');
-    } catch (e) {
-    }
+    } catch (e) {}
     return { url };
   }
 
   /**
-  * Get all current chat instances
-  */
+   * Get all current chat instances
+   */
   getChats(): Chat[] {
     try {
       const { chats } = this.readDataFromFile();
@@ -289,8 +290,8 @@ export class WhatsappService {
   }
 
   /**
-  * Get all current contact instances
-  */
+   * Get all current contact instances
+   */
   getContacts(): Contact[] {
     try {
       const { contacts } = this.readDataFromFile();
@@ -301,32 +302,31 @@ export class WhatsappService {
   }
 
   /**
-  * Get the registered WhatsApp ID for a number. 
-  * Will return null if the number is not registered on WhatsApp.
-  */
-  async getNumberId(number: string): Promise<Object> {
+   * Get the registered WhatsApp ID for a number.
+   * Will return null if the number is not registered on WhatsApp.
+   */
+  async getNumberId(number: string): Promise<object> {
     let result = {};
     try {
       [result] = await this.client.onWhatsApp(number);
-    } catch (e) {
-    }
+    } catch (e) {}
     return result;
   }
 
   /*
-  * Close actual session
-  */
+   * Close actual session
+   */
   async logout(): Promise<void> {
     try {
       await this.client.logout();
     } catch (e) {
-      console.log(e);
+      this.logger.debug(e);
     }
   }
 
   /**
-  * Start html page for event emitter
-  */
+   * Start html page for event emitter
+   */
   html(): string {
     const color = 'rgba(50, 50, 50, 0.8)';
     return `<!DOCTYPE html>
@@ -369,19 +369,17 @@ export class WhatsappService {
 
   // Return the type of converstion mimetype
   private getMediaMimeType(conversation: any): string {
-    const { imageMessage, videoMessage, documentMessage, audioMessage, documentWithCaptionMessage } = conversation?.message;
+    if (!conversation?.message) {
+      return '';
+    }
 
-    return to.string(
-      imageMessage?.mimetype ??
-      audioMessage?.mimetype ??
-      videoMessage?.mimetype ??
-      documentMessage?.mimetype ??
-      documentWithCaptionMessage?.message?.documentMessage?.mimetype
-    )
+    const { imageMessage, videoMessage, documentMessage, audioMessage, documentWithCaptionMessage } = conversation?.message || {};
+
+    return to.string(imageMessage?.mimetype ?? audioMessage?.mimetype ?? videoMessage?.mimetype ?? documentMessage?.mimetype ?? documentWithCaptionMessage?.message?.documentMessage?.mimetype);
   }
 
   // Read existing data from the JSON file
-  private readDataFromFile(): { chats: Chat[], contacts: Contact[] } {
+  private readDataFromFile(): { chats: Chat[]; contacts: Contact[] } {
     if (fs.existsSync(this.filePath)) {
       const data = fs.readFileSync(this.filePath, 'utf8');
       return JSON.parse(data);
@@ -392,5 +390,5 @@ export class WhatsappService {
   // Save chats and contacts to the JSON file
   private saveDataToFile(chats: Chat[], contacts: Contact[]) {
     fs.writeFileSync(this.filePath, JSON.stringify({ chats, contacts }, null, 2), 'utf8');
-  };
+  }
 }

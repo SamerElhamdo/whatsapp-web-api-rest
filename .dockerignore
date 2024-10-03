@@ -10,3 +10,4 @@ README.md
 .prettierrc
 commitlint.config.js
 auth_info
+dist

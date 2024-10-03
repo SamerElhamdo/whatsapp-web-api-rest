@@ -29,12 +29,12 @@
   "dependencies": {
     "@fastify/static": "7.0.4",
     "@hapi/boom": "^10.0.1",
-    "@nestjs/common": "^10.4.3",
+    "@nestjs/common": "^10.4.4",
     "@nestjs/config": "^3.2.3",
-    "@nestjs/core": "^10.4.3",
+    "@nestjs/core": "^10.4.4",
     "@nestjs/event-emitter": "^2.0.4",
-    "@nestjs/platform-fastify": "^10.4.3",
-    "@whiskeysockets/baileys": "^6.7.7",
+    "@nestjs/platform-fastify": "^10.4.4",
+    "@whiskeysockets/baileys": "^6.7.8",
     "fastify": "^5.0.0",
     "qrcode-terminal": "^0.12.0",
     "reflect-metadata": "^0.2.2",
@@ -44,6 +44,6 @@
     "@biomejs/biome": "^1.9.3",
     "@nestjs/cli": "^10.4.5",
     "@nestjs/swagger": "^7.4.2",
-    "husky": "^8.0.0"
+    "husky": "^9.1.6"
   }
 }

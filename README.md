@@ -308,21 +308,13 @@ npm run dev or pnpm dev
     
       const message = bodyPayload?.message;
       const media = bodyPayload?.media;
-    
       const from = message?.from;
-      const to = message?.to;
-      const type = message?.type;
-      const body = message?.body;
-      const notifyName = message?._data?.notifyName;
-      const hasMedia = message?.hasMedia;
-      const deviceType = message?.deviceType;
-    
-      console.log({ from, to, type, body, notifyName, deviceType, hasMedia, media })
-    
+      console.log(from)
+
       // Body payload data 
       const payload = {
         chatId: from,
-        content: 'Response from webhook'
+        text: 'Response from webhook'
       }
     
       // Send message to endpoint

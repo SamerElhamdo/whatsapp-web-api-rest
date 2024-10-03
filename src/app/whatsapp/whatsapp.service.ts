@@ -81,9 +81,8 @@ export class WhatsappService {
     let text = '';
 
     if (is.string(qr) && qr !== '') {
-      const text = new Date().toISOString().replace('T', ' ').replace('Z', '').substring(0, 19);
       qrcode.generate(qr, { small: true });
-      this.eventEmitter.emit('start.event', { qr, text });
+      this.eventEmitter.emit('start.event', { qr, text: '' });
     }
 
     // Handle connection close and reconnection logic

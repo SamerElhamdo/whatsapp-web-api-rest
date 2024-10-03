@@ -11,3 +11,4 @@ README.md
 commitlint.config.js
 auth_info
 dist
+.husky

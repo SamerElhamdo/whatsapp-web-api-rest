@@ -1,13 +1,14 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { EventEmitter2 } from '@nestjs/event-emitter';
-import { delay, is, to } from '@src/tools';
-import { WebhookService } from '../webhook/webhook.service';
-import { IMessage } from './whatsapp.interface';
-const qrcode = require('qrcode-terminal');
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { Boom } from '@hapi/boom';
+import { Injectable, Logger } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { delay, is, to } from '@src/tools';
 import makeWASocket, { Browsers, Chat, ConnectionState, Contact, DisconnectReason, downloadMediaMessage, isJidBroadcast, isJidNewsletter, isJidStatusBroadcast, useMultiFileAuthState, WACallEvent, WAPresence } from '@whiskeysockets/baileys';
+import { WebhookService } from '../webhook/webhook.service';
+import { IMessage } from './whatsapp.interface';
+const Pino = require('pino');
+const qrcode = require('qrcode-terminal');
 
 declare global {
   interface Window {
@@ -64,6 +65,7 @@ export class WhatsappService {
       maxMsgRetryCount: 4,
       connectTimeoutMs: 20_000,
       keepAliveIntervalMs: 30_000,
+      logger: Pino({ level: 'fatal' }), // https://github.com/pinojs/pino/blob/main/docs/api.md#logger-level
     });
 
     this.client.ev.on('creds.update', saveCreds);
@@ -110,7 +112,7 @@ export class WhatsappService {
 
   // Listen for incoming historical chats and contacts
   private onMessagingHistory = (data: any) => {
-    this.logger.debug('Historical chats and contacts synced');
+    //this.logger.debug('Historical chats and contacts synced');
 
     const existingData = this.readDataFromFile();
 
@@ -124,7 +126,7 @@ export class WhatsappService {
 
     // Save updated chats and contacts to the file
     this.saveDataToFile(updatedChats, updatedContacts);
-    this.logger.debug('Chats and contacts saved to whatsapp_data.json');
+    //this.logger.debug('Chats and contacts saved to whatsapp_data.json');
   };
 
   /**
@@ -161,11 +163,11 @@ export class WhatsappService {
    * Receive an update on a call, including when the call was received, rejected, accepted
    **/
   private onCall = async (call: WACallEvent) => {
-    await this.client.rejectCall(call?.id, call?.from);
+    try {
+      await this.client.rejectCall(call?.id, call?.from);
+    } catch (e) {}
     const list: any = this.webhook.get();
-    if (is.array(list)) {
-      this.webhook.send(list, { call });
-    }
+    if (is.array(list)) this.webhook.send(list, { call });
   };
 
   /**
@@ -368,9 +370,7 @@ export class WhatsappService {
 
   // Return the type of converstion mimetype
   private getMediaMimeType(conversation: any): string {
-    if (!conversation?.message) {
-      return '';
-    }
+    if (!conversation?.message) return '';
 
     const { imageMessage, videoMessage, documentMessage, audioMessage, documentWithCaptionMessage } = conversation?.message || {};
 

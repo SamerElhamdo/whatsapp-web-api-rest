@@ -3,21 +3,16 @@
   "version": "1.0.0",
   "description": "whatsapp-web-api-rest is an easy-to-use REST API wrapper for Baileys - Lightweight WhatsApp Web API built with NestJS. It allows you to interact with WhatsApp using endpoints to enable message sending, simulate actions, fetch contacts, and more.",
   "author": "Cristian Yosafat Hernández Ruiz",
-  "keywords": [
-    "whatsapp",
-    "whatsapp API",
-    "nestjs"
-  ],
+  "keywords": ["whatsapp", "whatsapp API", "nestjs"],
   "license": "MIT",
   "main": "index.js",
   "scripts": {
     "build": "nest build",
-    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "dev": "nest start --watch",
     "start": "nest start",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/app.main",
-    "biome": "biome format --fix && biome check",
+    "lint": "biome format --fix && biome check --fix --unsafe --max-diagnostics=500",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
@@ -29,21 +24,22 @@
   "dependencies": {
     "@fastify/static": "7.0.4",
     "@hapi/boom": "^10.0.1",
-    "@nestjs/common": "^10.4.4",
-    "@nestjs/config": "^3.2.3",
-    "@nestjs/core": "^10.4.4",
-    "@nestjs/event-emitter": "^2.0.4",
-    "@nestjs/platform-fastify": "^10.4.4",
-    "@whiskeysockets/baileys": "^6.7.8",
+    "@nestjs/common": "^10.4.6",
+    "@nestjs/config": "^3.3.0",
+    "@nestjs/core": "^10.4.6",
+    "@nestjs/event-emitter": "^2.1.1",
+    "@nestjs/platform-fastify": "^10.4.6",
+    "@whiskeysockets/baileys": "^6.7.9",
     "fastify": "^5.0.0",
+    "pino": "^9.5.0",
     "qrcode-terminal": "^0.12.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1"
   },
   "devDependencies": {
-    "@biomejs/biome": "^1.9.3",
+    "@biomejs/biome": "^1.9.4",
     "@nestjs/cli": "^10.4.5",
-    "@nestjs/swagger": "^7.4.2",
+    "@nestjs/swagger": "^8.0.1",
     "husky": "^9.1.6"
   }
 }

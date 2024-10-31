@@ -32,7 +32,7 @@ docker run --restart unless-stopped -dp 8085:8085 --name whatsapp-web-api-rest b
 Clone the repository:
 
 ```bash
-git clone https://github.com/your-username/whatsapp-web-api-rest.git
+git clone https://github.com/BlakePro/whatsapp-web-api-rest.git
 ```
 
 Install dependencies:

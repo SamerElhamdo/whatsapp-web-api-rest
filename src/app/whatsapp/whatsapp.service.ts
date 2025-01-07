@@ -134,25 +134,28 @@ export class WhatsappService {
    * the update will have type: "notify"
    */
   private onMessageUpsert = async (waMessage: any) => {
-    if (waMessage?.type === 'notify') {
-      const messages = waMessage.messages;
-      if (is.array(messages)) {
-        for (const conversation of messages) {
-          if (!conversation.key.fromMe && conversation.message) {
-            const from = conversation.key.remoteJid;
-            if (isJidStatusBroadcast(from) || isJidNewsletter(from) || isJidBroadcast(from)) return;
+    const messageType = waMessage?.type;
+    //if (waMessage?.type === 'notify')
+    const messages = waMessage.messages;
+    if (is.array(messages)) {
+      for (const conversation of messages) {
+        if (!conversation.key.fromMe && conversation.message) {
+          const from = conversation.key.remoteJid;
+          if (isJidStatusBroadcast(from) || isJidNewsletter(from) || isJidBroadcast(from)) return;
 
-            const list: any = this.webhook.get();
-            if (is.array(list)) {
-              const mimeType = this.getMediaMimeType(conversation);
-              const media = { mimeType, data: '' };
+          const list: any = this.webhook.get();
+          if (is.array(list)) {
+            const mimeType = this.getMediaMimeType(conversation);
+            const media = { mimeType, data: '' };
 
-              if (mimeType !== '') {
-                const mediaBuffer = await downloadMediaMessage(conversation, 'buffer', {});
-                media.data = mediaBuffer.toString('base64');
-              }
-              this.webhook.send(list, { message: { ...conversation, from }, media });
+            if (mimeType !== '') {
+              const mediaBuffer = await downloadMediaMessage(conversation, 'buffer', {});
+              media.data = mediaBuffer.toString('base64');
             }
+
+            const payload = { messageType, message: { ...conversation, from }, media };
+            //console.log(JSON.stringify(payload, null, 2));
+            this.webhook.send(list, payload);
           }
         }
       }

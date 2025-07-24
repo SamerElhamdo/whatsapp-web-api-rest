@@ -1,10 +1,7 @@
 {
   "files": {
     "ignoreUnknown": false,
-    "ignore": [
-      "dist/**",
-      "public/**"
-    ]
+    "ignore": ["dist/**", "public/**"]
   },
   "formatter": {
     "enabled": true,
@@ -12,20 +9,26 @@
     "indentStyle": "space",
     "indentWidth": 2
   },
+  "organizeImports": {
+    "enabled": true
+  },
   "linter": {
     "enabled": true,
     "rules": {
       "recommended": true,
       "suspicious": {
-        "noExplicitAny": "off"
-      },
-      "style": {
-        "useImportType": "off",
-        "useTemplate": "off"
+        "noExplicitAny": "off",
+        "noMisleadingCharacterClass": "off",
+        "noThenProperty": "off"
       },
       "correctness": {
         "noUnusedVariables": "error",
         "noUnusedImports": "error"
+      },
+      "style": {
+        "useImportType": "off",
+        "useTemplate": "off",
+        "noParameterAssign": "off"
       }
     }
   },

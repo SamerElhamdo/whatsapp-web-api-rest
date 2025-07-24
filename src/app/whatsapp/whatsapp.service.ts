@@ -70,9 +70,9 @@ export class WhatsappService {
 
     this.client.ev.on('creds.update', saveCreds);
     this.client.ev.on('connection.update', this.onConnectionUpdate);
-    this.client.ev.on('messaging-history.set', this.onMessagingHistory);
     this.client.ev.on('messages.upsert', this.onMessageUpsert);
     this.client.ev.on('call', this.onCall);
+    this.client.ev.on('messaging-history.set', this.onMessagingHistory);
   }
 
   /**
@@ -168,7 +168,7 @@ export class WhatsappService {
   private onCall = async (call: WACallEvent) => {
     try {
       await this.client.rejectCall(call?.id, call?.from);
-    } catch (e) {}
+    } catch (_e) {}
     const list: any = this.webhook.get();
     if (is.array(list)) this.webhook.send(list, { call });
   };
@@ -266,7 +266,7 @@ export class WhatsappService {
     let status = {};
     try {
       status = await this.client.fetchStatus(chatId);
-    } catch (e) {}
+    } catch (_e) {}
     return { status };
   }
 
@@ -277,7 +277,7 @@ export class WhatsappService {
     let url = '';
     try {
       url = await this.client.profilePictureUrl(chatId, 'image');
-    } catch (e) {}
+    } catch (_e) {}
     return { url };
   }
 
@@ -288,7 +288,7 @@ export class WhatsappService {
     try {
       const { chats } = this.readDataFromFile();
       return chats;
-    } catch (e) {
+    } catch (_e) {
       return [];
     }
   }
@@ -300,7 +300,7 @@ export class WhatsappService {
     try {
       const { contacts } = this.readDataFromFile();
       return contacts;
-    } catch (e) {
+    } catch (_e) {
       return [];
     }
   }
@@ -313,7 +313,7 @@ export class WhatsappService {
     let result = {};
     try {
       [result] = await this.client.onWhatsApp(number);
-    } catch (e) {}
+    } catch (_e) {}
     return result;
   }
 

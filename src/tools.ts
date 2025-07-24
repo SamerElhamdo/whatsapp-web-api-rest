@@ -1,6 +1,9 @@
 export const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
 export const is = {
+  number: (str: any): boolean => {
+    return typeof str === 'number';
+  },
   array: (array: any): boolean => {
     return typeof array === 'object' && array != null && array.length > 0;
   },
@@ -11,7 +14,7 @@ export const is = {
     return file instanceof File;
   },
   object: (object: any): boolean => {
-    return typeof object === 'object' && object != null && Object.keys(object).length > 0;
+    return typeof object === 'object' && object !== null && Object.keys(object).length > 0;
   },
   string: (str: any): boolean => {
     return typeof str === 'string';
@@ -21,10 +24,16 @@ export const is = {
 export const to = {
   string: (str: any): string => {
     if (typeof str === 'string') return str;
+    if (typeof str === 'number') return `${str} `.trim();
     return '';
   },
   undefined: (str: any, defaultValue = undefined): string | number | undefined => {
     if ((typeof str === 'string' || typeof str === 'number') && str !== '') return str;
     return defaultValue;
+  },
+  number: (num: any, defaultNumber = 0) => {
+    num = to.string(num).replace(/[^\d.\-]/g, '');
+    if (is.undefined(num) || num === null || Number.isNaN(num)) return defaultNumber;
+    return Number(num);
   },
 };

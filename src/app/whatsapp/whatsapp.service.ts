@@ -9,6 +9,7 @@ import { WebhookService } from '../webhook/webhook.service';
 import { IMessage } from './whatsapp.interface';
 const Pino = require('pino');
 const qrcode = require('qrcode-terminal');
+const QRCode = require('qrcode');
 
 declare global {
   interface Window {
@@ -28,6 +29,7 @@ declare global {
 export class WhatsappService {
   private client: any = null;
   private isConnected = false;
+  private currentQRCode: string = '';
   private readonly filePath: string = path.join(__dirname, '..', 'whatsapp_data.json');
   private readonly credentialsFolderName = 'auth_info';
   private readonly logger = new Logger('Whatsapp');
@@ -83,6 +85,7 @@ export class WhatsappService {
     let text = '';
 
     if (is.string(qr) && qr !== '') {
+      this.currentQRCode = qr;
       qrcode.generate(qr, { small: true });
       this.eventEmitter.emit('start.event', { qr, text: '' });
     }
@@ -102,6 +105,7 @@ export class WhatsappService {
     } else if (connection === 'open') {
       text = 'Connected to WhatsApp!';
       this.isConnected = true;
+      this.currentQRCode = ''; // Clear QR code when connected
     }
 
     if (text !== '') {
@@ -326,6 +330,67 @@ export class WhatsappService {
     } catch (e) {
       this.logger.debug(e);
     }
+  }
+
+  /**
+   * Generate QR code as base64 string
+   */
+  async generateQRCodeBase64(qrData: string): Promise<string> {
+    try {
+      const qrCodeBase64 = await QRCode.toDataURL(qrData, {
+        errorCorrectionLevel: 'H',
+        type: 'image/png',
+        quality: 0.92,
+        margin: 1,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF'
+        }
+      });
+      // Remove the data:image/png;base64, prefix
+      return qrCodeBase64.replace(/^data:image\/png;base64,/, '');
+    } catch (error) {
+      this.logger.error('Error generating QR code:', error);
+      return '';
+    }
+  }
+
+  /**
+   * Generate QR code as buffer for direct image response
+   */
+  async generateQRCodeBuffer(qrData: string): Promise<Buffer> {
+    try {
+      const qrCodeBuffer = await QRCode.toBuffer(qrData, {
+        errorCorrectionLevel: 'H',
+        type: 'image/png',
+        margin: 1,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF'
+        }
+      });
+      return qrCodeBuffer;
+    } catch (error) {
+      this.logger.error('Error generating QR code buffer:', error);
+      return Buffer.alloc(0);
+    }
+  }
+
+  /**
+   * Get current QR code as base64
+   */
+  async getCurrentQRCode(): Promise<{ qr: string; text: string; connected: boolean }> {
+    if (this.isConnected) {
+      return { qr: '', text: 'WhatsApp is already connected!', connected: true };
+    }
+    
+    // If we have a stored QR code, return it
+    if (this.currentQRCode) {
+      const qrBase64 = await this.generateQRCodeBase64(this.currentQRCode);
+      return { qr: qrBase64, text: 'Scan this QR code to connect to WhatsApp', connected: false };
+    }
+    
+    return { qr: '', text: 'No QR code available. Please wait...', connected: false };
   }
 
   /**

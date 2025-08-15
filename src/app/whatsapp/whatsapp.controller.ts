@@ -25,6 +25,37 @@ export class WhatsappController {
     reply.type('text/html').send(html);
   }
 
+  @Get('qr')
+  @ApiProduces('application/json')
+  async controllerGetQR(): Promise<{ qr: string; text: string; connected: boolean }> {
+    return await this.whatsapp.getCurrentQRCode();
+  }
+
+  @Post('qr')
+  @ApiProduces('application/json')
+  @ApiConsumes('application/json')
+  async controllerPostQR(@Body() body: { text: string }): Promise<{ qr: string; text: string }> {
+    const { text } = body;
+    if (!text) {
+      return { qr: '', text: 'Text is required' };
+    }
+    const qrBase64 = await this.whatsapp.generateQRCodeBase64(text);
+    return { qr: qrBase64, text: `QR code generated for: ${text}` };
+  }
+
+  @Get('qr/image')
+  @ApiProduces('image/png')
+  async controllerGetQRImage(@Res() reply: FastifyReply): Promise<void> {
+    const qrData = await this.whatsapp.getCurrentQRCode();
+    if (qrData.qr) {
+      const qrBuffer = await this.whatsapp.generateQRCodeBuffer(qrData.qr);
+      reply.type('image/png').send(qrBuffer);
+    } else {
+      reply.status(404).send({ error: 'No QR code available' });
+    }
+    return;
+  }
+
   @Post('message')
   @ApiProduces('application/json')
   @ApiConsumes('application/json')

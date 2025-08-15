@@ -2,9 +2,9 @@
   <img src="public/api_whatsapp.png" alt="Lightweight API for WhatsApp" width="120" height="120">
 </p>
 
-# 📱 WhatsApp API REST
+# 📱 WhatsApp Core API REST
 
-`whatsapp-web-api-rest` is an easy-to-use Docker REST API  wrapper for [Baileys - Lightweight full-featured TypeScript/JavaScript WhatsApp Web API](https://github.com/WhiskeySockets/Baileys) built with [NestJS](https://nestjs.com/). It allows you to interact with WhatsApp using endpoints to enable message sending, simulate actions, fetch contacts, and more.
+`whatsapp-core` is an easy-to-use Docker REST API wrapper for [Baileys - Lightweight full-featured TypeScript/JavaScript WhatsApp Web API](https://github.com/WhiskeySockets/Baileys) built with [NestJS](https://nestjs.com/). It allows you to interact with WhatsApp using endpoints to enable message sending, simulate actions, fetch contacts, and more.
 
 ## ✨ Features
 
@@ -14,16 +14,80 @@
 - 🔔 Manage webhooks for real-time updates
 - 🔄 Server-Sent Events (SSE) for live message updates
 - ⚡️ RESTful design based on NestJS
+- 🔐 **NEW**: Django Gateway integration for session management
+- 📱 **NEW**: QR code generation as base64 strings
+- 📦 **NEW**: Containerized architecture for SaaS deployment
 
 <br/>
 
 ## 🐳 Docker
 
-> https://hub.docker.com/r/blakegt/whatsapp-web-api-rest
-
+### **Local Development:**
 ```bash
-docker run --restart unless-stopped -dp 8085:8085 --name whatsapp-web-api-rest blakegt/whatsapp-web-api-rest:latest
+# Build the image
+docker build -t whatsapp-core:latest .
+
+# Run the container
+docker run -d \
+  --name whatsapp-core-test \
+  -e DJANGO_GATEWAY_URL="http://localhost:8000" \
+  -e DJANGO_API_TOKEN="your_api_token" \
+  -e SESSION_ID="unique-session-id" \
+  -e CONTAINER_ID="container-001" \
+  -e APP_PORT="8085" \
+  -p 8085:8085 \
+  whatsapp-core:latest
 ```
+
+### **Production (EKS/Kubernetes):**
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: whatsapp-core
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: whatsapp-core
+  template:
+    metadata:
+      labels:
+        app: whatsapp-core
+    spec:
+      containers:
+      - name: whatsapp-core
+        image: whatsapp-core:latest
+        ports:
+        - containerPort: 8085
+        env:
+        - name: DJANGO_GATEWAY_URL
+          value: "https://your-django-app.com"
+        - name: DJANGO_API_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: whatsapp-secrets
+              key: api-token
+        - name: SESSION_ID
+          value: "user-123"
+        - name: CONTAINER_ID
+          value: "container-001"
+        - name: APP_PORT
+          value: "8085"
+```
+
+<br/>
+
+## 🔧 Environment Variables
+
+| Variable | Required | Description | Default |
+|----------|----------|-------------|---------|
+| `DJANGO_GATEWAY_URL` | ✅ | Django Gateway URL for session management | `http://localhost:8000` |
+| `DJANGO_API_TOKEN` | ✅ | API token for Django authentication | - |
+| `SESSION_ID` | ✅ | Unique session identifier | `default` |
+| `CONTAINER_ID` | ❌ | Container identifier (auto-generated) | `container-001` |
+| `APP_PORT` | ❌ | Application port | `8085` |
+| `LOG_LEVEL` | ❌ | Logging level | `info` |
 
 <br/>
 
@@ -39,26 +103,62 @@ Install dependencies:
 
 ```bash
 cd whatsapp-web-api-rest
-npm install or pnpm i
+npm install
 ```
 
 Start the server:
 
 ```bash
-npm run dev or pnpm dev
+npm run dev
 ```
 
 <br/>
 
 ## 🛠️ API Endpoints
 
+### **Session Management:**
 - `GET` /
 
-    **Start whatsApp session**
+    **Start WhatsApp session**
 
     Returns an HTML page displaying QR code for authentication `curl -i http://localhost:8085` or open in your browser [http://localhost:8085](http://localhost:8085)
 
+- `GET` /qr
 
+    **Get current WhatsApp QR code as base64**
+
+    Returns the current QR code for WhatsApp authentication as base64 string, along with connection status
+    
+    `curl http://localhost:8085/qr`
+
+    Response:
+    ```json
+    {
+      "qr": "iVBORw0KGgoAAAANSUhEUgAA...",
+      "text": "Scan this QR code to connect to WhatsApp",
+      "connected": false
+    }
+    ```
+
+- `POST` /qr
+
+    **Generate QR code from custom text as base64**
+
+    Generate a QR code from any text input and return it as base64 string
+    
+    `curl -X POST http://localhost:8085/qr \
+    -H "Content-Type: application/json" \
+    -d '{"text": "Hello World"}'`
+
+    Response:
+    ```json
+    {
+      "qr": "iVBORw0KGgoAAAANSUhEUgAA...",
+      "text": "QR code generated for: Hello World"
+    }
+    ```
+
+### **Messaging:**
 - `POST`  /message
  
     **Send message text, media, location, poll, contact**
@@ -176,8 +276,7 @@ npm run dev or pnpm dev
       }
       ```
 
-<br/>
-
+### **Actions & Status:**
 - `POST` /simulate
 
     **Simulate an action (presence)**
@@ -209,8 +308,7 @@ npm run dev or pnpm dev
      
      `curl http://localhost:8085/picture/status/:chatId`
 
-<br/>
-
+### **Data Retrieval:**
 - `GET` /chats
 
     **Fetches all available chats**
@@ -234,8 +332,7 @@ npm run dev or pnpm dev
   
   `curl http://localhost:8085/number/:number`
 
-<br/>
-
+### **Session Control:**
 - `GET` /logout
 
     **Logs out from the current WhatsApp session**
@@ -281,10 +378,10 @@ npm run dev or pnpm dev
 1. Create a folder in your computer and enter
 
 2. Init the project
-`npm init` or `pnpm i`
+`npm init`
 
 3. Install express.js
-`npm i express.js` or `pnpm i express.js`
+`npm i express.js`
 
 4. Create a file index.js
 
@@ -336,6 +433,34 @@ npm run dev or pnpm dev
     });
     ```
 
+## 🤝 Deployment
+
+### **Local Development:**
+```bash
+npm run dev
+```
+
+### **Production Build:**
+```bash
+npm run build
+npm run start:prod
+```
+
+### **Docker:**
+```bash
+# Build
+docker build -t whatsapp-core:latest .
+
+# Run
+docker run -d \
+  --name whatsapp-core \
+  -e DJANGO_GATEWAY_URL="https://your-django-app.com" \
+  -e DJANGO_API_TOKEN="your_token" \
+  -e SESSION_ID="user-123" \
+  -p 8085:8085 \
+  whatsapp-core:latest
+```
+
 ## 🤝 Contributing
 
 Feel free to contribute by creating issues or submitting pull requests. All contributions are welcome!
@@ -351,3 +476,12 @@ This project is licensed under the MIT License.
 ## 👨🏻‍💻 Author
 
 [Cristian Yosafat Hernández Ruiz - BlakePro](https://github.com/blakepro)
+
+## 🔄 Recent Updates
+
+- ✅ Added Django Gateway integration
+- ✅ Added QR code generation as base64
+- ✅ Added containerized architecture support
+- ✅ Added environment variables configuration
+- ✅ Added Kubernetes deployment examples
+- ✅ Updated API documentation
